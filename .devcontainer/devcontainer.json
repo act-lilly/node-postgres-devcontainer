@@ -1,0 +1,24 @@
+{
+    "name": "Node Development Container",
+    "dockerComposeFile": "docker-compose.yml",
+    "service": "app",
+    "workspaceFolder": "/workspaces/${localWorkspaceFolderBasename}",   
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "github.copilot",
+                "github.copilot-chat",
+                "ms-vscode-remote.remote-containers",
+                "esbenp.prettier-vscode",
+                "cweijan.vscode-postgresql-client2"
+            ],
+            "settings": {
+                "terminal.integrated.defaultProfile.linux": "bash"
+            }
+        }
+    },
+    "remoteUser": "node",
+    "postCreateCommand": "sudo groupadd -f docker && sudo usermod -aG docker node && sudo chmod 666 /var/run/docker.sock && (test -f package.json && npm install || echo 'No package.json found, skipping npm install') && (test -f package.json && npm run build || echo 'Skipping build')",
+    "postAttachCommand": "npm install",
+    "forwardPorts": [5432, 5050]
+}

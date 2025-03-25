@@ -1,0 +1,76 @@
+version: '3.8'
+
+# PostgreSQL Configuration Notes:
+# - SQL initialization files in /docker-entrypoint-initdb.d/ are executed in alphabetical order
+# - The numeric prefixes (01, 02, 03) ensure schema is created before data is loaded
+# - Modify the SQL files in the ../sql/ directory to customize your database
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    volumes:
+      - ..:/workspaces/${localWorkspaceFolderBasename}:cached
+      - /var/run/docker.sock:/var/run/docker.sock
+      - logs-data:/workspaces/${localWorkspaceFolderBasename}/data/logs
+    command: sleep infinity
+    env_file:
+      - ./dev.env
+    depends_on:
+      - db
+
+  db:
+    image: postgres:latest
+    restart: unless-stopped
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      # Creates database schema (tables, indexes, etc.)
+      - ../sql/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      # Populates tables with sample data
+      - ../sql/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+      # Adds stored functions, procedures and triggers
+      - ../sql/functions.sql:/docker-entrypoint-initdb.d/03-functions.sql
+    env_file:
+      - ./dev.env
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5    
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    restart: unless-stopped
+    environment:
+      PGADMIN_CONFIG_SERVER_MODE: "False"
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: "False"
+      PGADMIN_CONFIG_CONSOLE_LOG_LEVEL: 10
+      PGADMIN_CONFIG_PROXY_X_HOST_COUNT: 1
+      PGADMIN_CONFIG_PROXY_X_PREFIX_COUNT: 1
+    env_file:
+      - ./dev.env
+    ports:
+      - "5050:5050"
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+      - ./servers.json:/pgadmin4/servers.json:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-O", "-", "http://localhost:5050/misc/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  postgres-data:
+  pgadmin-data:
+  logs-data:
+
+networks:
+  default:
+    driver: bridge
