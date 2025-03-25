@@ -11,7 +11,7 @@ The `devcontainer.json` file also includes details specific to a node.js app, bu
 In the `docker-compose.yml` file, you may want to adjust which postgres and pgadmin images are used.
 
 * PostgreSQL image: 
-    * `postgres:17.2:latest`
+    * `postgres:latest`
 * pgAdmin image:
     * `dpage/pgadmin4:latest`
 
